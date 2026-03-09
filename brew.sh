@@ -1,3 +1,7 @@
+hf download Qwen/Qwen2.5-0.5B
+curl -LsSf https://hf.co/cli/install.sh | bash
+brew install git-xet
+git xet install
 # Install SGLang from pip:
 pip install sglang
 # Start the SGLang server:
