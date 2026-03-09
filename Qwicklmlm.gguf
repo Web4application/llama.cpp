@@ -1,0 +1,135 @@
+# Remove a prompt cache file from the caller's cache folder
+dfx canister call llama_cpp remove_prompt_cache '(record {
+  args = vec {
+    "--prompt-cache"; "prompt.cache"
+  }
+})'
+
+# Copy a prompt cache file within the caller's cache folder
+dfx canister call llama_cpp copy_prompt_cache '(record {
+  from = "prompt.cache";
+  to = "prompt-save.cache"
+})'
+
+# ------------------------------------------------------------------
+# Download a chunk of a prompt cache file
+# Note: chunksize of 5 bytes is for demo only.
+#       -> use 200_000 or higher (2_000_000 max) in actual download
+#       -> experiment what chunksize results in fastest download
+dfx canister call llama_cpp download_prompt_cache_chunk '(record {
+  promptcache = "prompt.cache";
+  chunksize = 5 : nat64;
+  offset = 0 : nat64;
+})'
+# -> this will return something like:
+(
+  variant {
+    Ok = record {
+      done = true;
+      chunk = blob "\47\47\55\46\03";
+      offset = 0 : nat64;
+      filesize = 675_710_816 : nat64;
+      chunksize = 5 : nat64;
+    }
+  },
+)
+
+# --
+# Then call it again to download the next chunk of bytes
+dfx canister call llama_cpp download_prompt_cache_chunk '(record {
+  promptcache = "prompt.cache";
+  chunksize = 5 : nat64;
+  offset = 5 : nat64;
+})'
+# -> this will return something like:
+(
+  variant {
+    Ok = record {
+      done = true;
+      chunk = blob "\08\33\41\43\04";
+      offset = 5 : nat64;
+      filesize = 675_710_816 : nat64;
+      chunksize = 5 : nat64;
+    }
+  },
+)
+
+# The IC has a limit on message size:
+#    (-) same-subnet, inter-canister: Up to 10 MiB
+#    (-) else                       : Up to  2 MiB
+# You can wrap the download call in a loop, as in scripts/download.py
+# Using a small chunksize goes faster !
+#
+python -m scripts.download \
+    --network local \
+    --canister llama_cpp \
+    --filetype promptcache \
+    --chunksize 2000000 \
+    prompt.cache
+
+# ------------------------------------------------------------------
+# Upload a chunk of a prompt cache file
+# Note: chunksize of 5 bytes is for demo only.
+#       -> use 200_000 or higher (2_000_000 max) in actual download
+#       -> experiment what chunksize results in fastest download
+dfx canister call llama_cpp upload_prompt_cache_chunk '(record {
+  promptcache = "prompt.cache";
+  chunk = blob "\47\47\55\46\03";
+  chunksize = 5 : nat64;
+  offset = 0 : nat64;
+})'
+# -> this will return
+(
+  variant {
+    Ok = record {
+      filename = ".canister_cache/<principal-id>/sessions/prompt.cache";
+      filesize = 5 : nat64;
+      filesha256 = "fe3b34fd092c3e2c6da3270eb91c4d3e9c2c6f891c21b6ed7358bf5ecca2d207";
+    }
+  },
+)
+
+# --
+# Then call it again to upload the next chunk of bytes
+dfx canister call llama_cpp upload_prompt_cache_chunk '(record {
+  promptcache = "prompt.cache";
+  chunk = blob "\08\33\41\43\04";
+  chunksize = 5 : nat64;
+  offset = 5 : nat64;
+})'
+# -> this will return
+(
+  variant {
+    Ok = record {
+      filename = ".canister_cache/<principal-id>/sessions/prompt.cache";
+      filesize = 10 : nat64;
+      filesha256 = "438bb530032946102742839ca22319211409cbd1c403f87a82e68e35e89e8c15";
+    }
+  },
+)
+
+# --
+# You can check the filesize & sha256 of the uploaded prompt cache file in the canister
+dfx canister call llama_cpp uploaded_prompt_cache_details '(record {
+  promptcache = "prompt.cache";
+})'
+# -> this will return
+(
+  variant {
+    Ok = record {
+      filename = ".canister_cache/<principal-id>/sessions/prompt.cache";
+      filesize = 10 : nat64;
+      filesha256 = "438bb530032946102742839ca22319211409cbd1c403f87a82e68e35e89e8c15";
+    }
+  },
+)
+
+# --
+# You can wrap the upload call in a loop, as in scripts/upload.py
+python -m scripts.upload \
+    --network local \
+    --canister llama_cpp \
+    --canister-filename prompt.cache \
+    --filetype promptcache \
+    --chunksize 2000000 \
+    prompt.cache
