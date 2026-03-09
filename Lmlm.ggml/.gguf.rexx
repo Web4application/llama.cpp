@@ -1,4 +1,4 @@
-{%- if tools %}
+ {%- if tools %}
     {{- '<|im_start|>system\n' }}
     {%- if messages[0]['role'] == 'system' %}
         {{- messages[0]['content'] }}
